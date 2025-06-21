@@ -176,11 +176,16 @@ function pull {
     fi
 
     echo "Dumping Remote DB to $TMPDIR... "
-    mongodump \
-        -h "$remote_host_url":"$remote_host_port" \
-        -d "$remote_db" \
-        $REMOTE_CREDENTIALS \
-        -o "$TMPDIR" > /dev/null
+    if [ "$use_tls" == "true" ]; then
+        MONGO_URI="mongodb://$remote_access_username:$remote_access_password@$remote_host_url:$remote_host_port/$remote_db?tls=true&retryWrites=false&directConnection=true&authMechanism=SCRAM-SHA-1"
+        mongodump --uri="$MONGO_URI" -o "$TMPDIR" > /dev/null
+    else
+        mongodump \
+            -h "$remote_host_url":"$remote_host_port" \
+            -d "$remote_db" \
+            $REMOTE_CREDENTIALS \
+            -o "$TMPDIR" > /dev/null
+    fi
     success_msg
 
     echo "Overwriting Local DB with Dump... "
@@ -222,11 +227,16 @@ function push {
     success_msg
 
     echo "Overwriting Remote DB with Dump... "
-    mongorestore \
-        -h "$remote_host_url":"$remote_host_port" \
-        -d "$remote_db" \
-        $REMOTE_CREDENTIALS \
-        "$TMPDIR"/"$local_db" --drop > /dev/null
+    if [ "$use_tls" == "true" ]; then
+        MONGO_URI="mongodb://$remote_access_username:$remote_access_password@$remote_host_url:$remote_host_port/$remote_db?tls=true&retryWrites=false&directConnection=true&authMechanism=SCRAM-SHA-1"
+        mongorestore --uri="$MONGO_URI" "$TMPDIR"/"$local_db" --drop > /dev/null
+    else
+        mongorestore \
+            -h "$remote_host_url":"$remote_host_port" \
+            -d "$remote_db" \
+            $REMOTE_CREDENTIALS \
+            "$TMPDIR"/"$local_db" --drop > /dev/null
+    fi
     success_msg
 
     if [ "$tunnel_on" == true ] ; then
